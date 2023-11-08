@@ -1,0 +1,29 @@
+##
+## https://www.home-assistant.io/integrations/dsmr
+##
+
+#subtract power production from delivery from P1 reader
+template:
+  - sensor:
+      - name: power total
+        state: "{{ states('sensor.electricity_meter_power_consumption') | float(0) - states('sensor.electricity_meter_power_production') | float(0) }}"
+        device_class: power
+        unit_of_measurement: kW
+        
+  - sensor:
+      - name: power total L1
+        state: "{{ states('sensor.electricity_meter_power_consumption_phase_l1') | float(0) - states('sensor.electricity_meter_power_production_phase_l1') | float(0) }}"
+        device_class: power
+        unit_of_measurement: kW
+        
+  - sensor:
+      - name: power total L2
+        state: "{{ states('sensor.electricity_meter_power_consumption_phase_l2') | float(0) - states('sensor.electricity_meter_power_production_phase_l2') | float(0) }}"
+        device_class: power
+        unit_of_measurement: kW
+        
+  - sensor:
+      - name: power total L3
+        state: "{{ states('sensor.electricity_meter_power_consumption_phase_l3') | float(0) - states('sensor.electricity_meter_power_production_phase_l3') | float(0) }}"
+        device_class: power
+        unit_of_measurement: kW
