@@ -9,7 +9,7 @@ modbus:
     timeout: 5
     sensors:
       - name: SMA Actual power
-        unique_id: fa400021001
+        unique_id: sma_actual_power
         unit_of_measurement: W
         slave: 3
         address: 30775
@@ -19,7 +19,7 @@ modbus:
         device_class: power
         state_class: measurement
       - name: SMA Today yield
-        unique_id: fa400021002
+        unique_id: sma_today_yield
         unit_of_measurement: Wh
         slave: 3
         address: 30517
@@ -28,7 +28,7 @@ modbus:
         device_class: energy
         state_class: total_increasing
       - name: SMA Total
-        unique_id: fa400021003
+        unique_id: sma_total
         unit_of_measurement: kWh
         slave: 3
         address: 30531
@@ -37,6 +37,18 @@ modbus:
         min_value: 0
         device_class: energy
         state_class: total_increasing
+      - name: SMA AC Voltage
+        unique_id: sma_ac_voltage
+        unit_of_measurement: V
+        slave: 3
+        address: 30783
+        input_type: input
+        scale: 0.01
+        precision: 2
+        data_type: int32
+        min_value: 0
+        device_class: voltage
+        state_class: measurement  
       - name: SMA DC Voltage 1
         unique_id: fa400021004
         unit_of_measurement: V
