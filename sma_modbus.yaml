@@ -7,9 +7,10 @@ modbus:
     delay: 0
     message_wait_milliseconds: 600
     timeout: 5
+
     sensors:
-      - name: SMA Actual power
-        unique_id: sma_actual_power
+      - name: SMA Actual
+        unique_id: sma_actual
         unit_of_measurement: W
         slave: 3
         address: 30775
@@ -18,9 +19,11 @@ modbus:
         min_value: 0
         device_class: power
         state_class: measurement
-      - name: SMA Today yield
-        unique_id: sma_today_yield
-        unit_of_measurement: Wh
+      - name: SMA Today
+        unique_id: sma_today
+        unit_of_measurement: kWh
+        scale: 0.001
+        precision: 3
         slave: 3
         address: 30517
         data_type: int64
@@ -33,6 +36,8 @@ modbus:
         slave: 3
         address: 30531
         input_type: input
+        scale: 1.0
+        precision: 0
         data_type: int32
         min_value: 0
         device_class: energy
@@ -48,33 +53,45 @@ modbus:
         data_type: int32
         min_value: 0
         device_class: voltage
-        state_class: measurement  
-      - name: SMA DC Voltage 1
-        unique_id: fa400021004
-        unit_of_measurement: V
+        state_class: measurement
+      - name: SMA AC Frequency
+        unique_id: sma_ac_frequency
+        unit_of_measurement: Hz
         slave: 3
-        address: 30771
+        address: 30803
         input_type: input
         scale: 0.01
         precision: 2
         data_type: int32
         min_value: 0
+        device_class: frequency
+        state_class: measurement
+      - name: SMA DC Voltage 1
+        unique_id: sma_dc_voltage_1
+        unit_of_measurement: V
+        slave: 3
+        address: 30771
+        input_type: input
+        scale: 0.01
+        precision: 1
+        data_type: int32
+        min_value: 0
         device_class: voltage
         state_class: measurement
       - name: SMA DC Current 1
-        unique_id: fa400021005
+        unique_id: sma_dc_current_1
         unit_of_measurement: A
         slave: 3
         address: 30769
         input_type: input
         scale: 0.001
-        precision: 3
+        precision: 2
         data_type: int32
         min_value: 0
         device_class: current
         state_class: measurement
       - name: SMA DC Power 1
-        unique_id: fa400021006
+        unique_id: sma_dc_power_1
         unit_of_measurement: W
         slave: 3
         address: 30773
@@ -84,31 +101,31 @@ modbus:
         device_class: power
         state_class: measurement
       - name: SMA DC Voltage 2
-        unique_id: fa400021007
+        unique_id: sma_dc_voltage_2
         unit_of_measurement: V
         slave: 3
         address: 30959
         input_type: input
         scale: 0.01
-        precision: 2
+        precision: 1
         data_type: int32
         min_value: 0
         device_class: voltage
         state_class: measurement
       - name: SMA DC Current 2
-        unique_id: fa400021008
+        unique_id: sma_dc_current_2
         unit_of_measurement: A
         slave: 3
         address: 30957
         input_type: input
         scale: 0.001
-        precision: 3
+        precision: 2
         data_type: int32
         min_value: 0
         device_class: current
         state_class: measurement
       - name: SMA DC Power 2
-        unique_id: fa400021009
+        unique_id: sma_dc_power_2
         unit_of_measurement: W
         slave: 3
         address: 30961
@@ -118,7 +135,7 @@ modbus:
         device_class: power
         state_class: measurement
       - name: SMA temperature
-        unique_id: fa400021010
+        unique_id: sma_temperature
         unit_of_measurement: °C
         slave: 3
         address: 30953
@@ -129,43 +146,129 @@ modbus:
         min_value: 0
         device_class: temperature
         state_class: measurement
-#      - name: SMA earthleakage
-#        unique_id: fa400021011
-#        unit_of_measurement: A
-#        slave: 3
-#        address: 30225
-#        input_type: input
-#        count: 2
-#        scale: 0.001
-#        precision: 3
-#        data_type: int32
-#        min_value: 0
-#        device_class: current
-#        state_class: measurement
-#        # VEBUS
+      - name: SMA insulation resistance
+        unique_id: sma_insulation_resistance
+        unit_of_measurement: Ohm
+        slave: 3
+        address: 30225
+        input_type: input
+        scale: 0.001
+        precision: 0
+        data_type: int32
+        min_value: 0
+        ##        device_class: resistance
+        state_class: measurement
+      - name: SMA earth leakage
+        unique_id: sma_earthleakage
+        unit_of_measurement: A
+        slave: 3
+        address: 31247
+        input_type: input
+        scale: 0.001
+        precision: 3
+        data_type: int32
+        min_value: 0
+        device_class: current
+        state_class: measurement
+      - name: SMA status
+        unique_id: sma_status
+        slave: 3
+        address: 30201
+        data_type: int32
+      - name: SMA grid
+        unique_id: sma_grid
+        slave: 3
+        address: 30217
+        data_type: uint32
+      - name: SMA limit percent
+        unique_id: sma_limit_percent
+        unit_of_measurement: "%"
+        slave: 3
+        address: 41255
+        input_type: holding
+        data_type: int16
+        min_value: 0
+        scale: 0.01
+        precision: 0
+        state_class: measurement
 
-#SMA power limit
+sensor:
+  - platform: template
+    sensors:
+      sma_power:
+        friendly_name: 'Power'
+        value_template: >-
+          {% if states('sensor.sma_actual')|float < 0 or states('sensor.sma_actual')|float > 10000 %}
+            0
+          {% else %}
+            {{ states('sensor.sma_actual') }}
+          {% endif %}
+        unit_of_measurement: "W"
+        icon_template: mdi:flash
+        unique_id: sma_power
+
+  - platform: template
+    sensors:
+      sma_energy_today:
+        friendly_name: 'Energy today'
+        value_template: >-
+          {% if states('sensor.sma_today')|float < 0 or states('sensor.sma_today')|float > 10000 %}
+            0
+          {% else %}
+            {{ states('sensor.sma_today') }}
+          {% endif %}
+        unit_of_measurement: "kWh"
+        icon_template: mdi:weather-sunny
+        unique_id: sma_energy_today
+
+      sma_inverter_status:
+        friendly_name: 'Inverter Status'
+        value_template: >-
+          {% if is_state('sensor.sma_status', '307' ) %}
+            OK
+          {% elif is_state('sensor.sma_status', '303' ) %}
+            Off
+          {% elif is_state('sensor.sma_status', '455' ) %}
+            Warning
+          {% elif is_state('sensor.sma_status', '35' ) %}
+            Error
+          {% endif %}
+        icon_template: mdi:state-machine
+        unique_id: sma_inverter_status
+
+      sma_grid_contactor:
+        friendly_name: 'Grid relais'
+        value_template: >-
+          {% if is_state('sensor.sma_grid', '51' ) %}
+            Closed
+          {% else %}
+            Open
+          {% endif %}
+        icon_template: mdi:connection
+        unique_id: sma_grid_connector
+
 input_number:
-  sma_electricity_meter_power_limit_slider:
+  sma_power_limit_slider:
     name: SMA Power Limit Slider
     initial: 100
-    min: 20
+    min: 0
     max: 100
     step: 1
+    unit_of_measurement: "%"
 
 automation:
-  alias: SMA Power Limit
-  id: fa400021013
-  description: ''
-  trigger:
-    - platform: state
-      entity_id: input_number.sma_electricity_meter_power_limit_slider
-  condition: []
-  action:
-    - service: modbus.write_register
-      data:
-        address: 40016
-        slave: 3
-        value: '{{ states("input_number.sma_electricity_meter_power_limit_slider") }}'
-        hub: modbus_sma
-  mode: single
+  - alias: SMA Power Limit
+    id: sma_power_limit
+    description: 'Limit power slider'
+    trigger:
+      - platform: state
+        entity_id: input_number.sma_power_limit_slider
+    condition: [ ]
+    action:
+      - service: modbus.write_register
+        data:
+          address: 40016
+          slave: 3
+          value: '{{ states("input_number.sma_power_limit_slider") }}'
+          hub: modbus_SMA1
+    mode: single
