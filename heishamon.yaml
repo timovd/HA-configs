@@ -30,16 +30,26 @@ automation:
       platform: state
       entity_id: input_select.heishamon_quietmode
     action:
-      service: mqtt.publish
-      data_template:
-        topic: panasonic_heat_pump/commands/SetQuietMode
-        retain: false #IMPORTANT! ALWAYS set retain flag false for commands!
-        payload_template: >-
-          {%- if states('input_select.heishamon_quietmode') == "Off" -%}
-            0
-          {%- else -%}
-            {{ states('input_select.heishamon_quietmode') }}
-          {%- endif -%}
+      - service: automation.turn_off
+        entity_id: automation.set_quiet_level_selector
+      - service: mqtt.publish
+        data_template:
+            topic: panasonic_heat_pump/commands/SetQuietMode
+            retain: false #IMPORTANT! ALWAYS set retain flag false for commands!
+            payload: >-
+              {%- if states('input_select.heishamon_quietmode') == "Off" -%}
+                0
+              {%- else -%}
+                {{ states('input_select.heishamon_quietmode') }}
+              {%- endif -%}
+      - delay:
+            hours: 0
+            minutes: 0
+            seconds: 5
+            milliseconds: 0
+        enabled: true
+      - service: automation.turn_on
+        entity_id: automation.set_quiet_level_selector
 
   #Fetches powerful level from status and sets the selector accordingly
   - alias: Set powerful level selector
@@ -63,16 +73,26 @@ automation:
       platform: state
       entity_id: input_select.heishamon_powermode
     action:
-      service: mqtt.publish
-      data_template:
-        topic: panasonic_heat_pump/commands/SetPowerfulMode
-        retain: false #IMPORTANT! ALWAYS set retain flag false for commands!
-        payload_template: >-
-          {%- if states('input_select.heishamon_powermode') == "Off" -%}
-            0
-          {%- else -%}
-            {{ "%.0f" % ((states('input_select.heishamon_powermode') | replace("min", "") | int) / 30) }}
-          {%- endif -%}
+      - service: automation.turn_off
+        entity_id: automation.set_powerful_level_selector
+      - service: mqtt.publish
+        data_template:
+          topic: panasonic_heat_pump/commands/SetPowerfulMode
+          retain: false #IMPORTANT! ALWAYS set retain flag false for commands!
+          payload: >-
+            {%- if states('input_select.heishamon_powermode') == "Off" -%}
+              0
+            {%- else -%}
+              {{ "%.0f" % ((states('input_select.heishamon_powermode') | replace("min", "") | int) / 30) }}
+            {%- endif -%}
+      - delay:
+            hours: 0
+            minutes: 0
+            seconds: 5
+            milliseconds: 0
+        enabled: true
+      - service: automation.turn_on
+        entity_id: automation.set_powerful_level_selector
 
   #Fetches heatmode from status and sets the selector accordingly
   - alias: Set heatmode selector
@@ -86,8 +106,10 @@ automation:
         option: >-
           {%- if trigger.payload == "0" -%}
             Heat
-          {%- if trigger.payload == "1" -%}
+          {%- elif trigger.payload == "1" -%}
             Cool
+          {%- elif trigger.payload == "2" -%}
+            Auto
           {%- endif -%}
 
   #Sets heatmode to the selected value
@@ -96,16 +118,28 @@ automation:
       platform: state
       entity_id: input_select.heishamon_heatmode
     action:
-      service: mqtt.publish
-      data_template:
-        topic: panasonic_heat_pump/commands/SetOperationMode
-        retain: false #IMPORTANT! ALWAYS set retain flag false for commands!
-        payload_template: >-
-          {%- if states('input_select.heishamon_heatmode') == "Heat" -%}
-            0
-          {%- if states('input_select.heishamon_heatmode') == "Cool" -%}
-            1
-          {%- endif -%}
+      - service: automation.turn_off
+        entity_id: automation.set_heatmode_selector    
+      - service: mqtt.publish
+        data_template:
+          topic: panasonic_heat_pump/commands/SetOperationMode
+          retain: false #IMPORTANT! ALWAYS set retain flag false for commands!
+          payload: >-
+            {%- if states('input_select.heishamon_heatmode') == "Heat" -%}
+              0
+            {%- elif states('input_select.heishamon_heatmode') == "Cool" -%}
+              1
+            {%- elif states('input_select.heishamon_heatmode') == "Auto" -%}
+              2            
+            {%- endif -%}
+      - delay:
+            hours: 0
+            minutes: 0
+            seconds: 5
+            milliseconds: 0
+        enabled: true
+      - service: automation.turn_on
+        entity_id: automation.set_heatmode_selector
 
   #Fetches Z1 temperature from status and sets the selector accordingly
   - alias: Set Z1 selector
@@ -125,20 +159,30 @@ automation:
       platform: state
       entity_id: input_number.heishamon_heatshift_z1
     action:
-      service: mqtt.publish
-      data_template:
-        topic: panasonic_heat_pump/commands/SetZ1HeatRequestTemperature
-        retain: false #IMPORTANT! ALWAYS set retain flag false for commands!
-        payload_template: >-
-          {{ "%.0f" % (states('input_number.heishamon_heatshift_z1') | int) }}
+      - service: automation.turn_off
+        entity_id: automation.set_Z1_selector
+      - service: mqtt.publish
+        data_template:
+          topic: panasonic_heat_pump/commands/SetZ1HeatRequestTemperature
+          retain: false #IMPORTANT! ALWAYS set retain flag false for commands!
+          payload: >-
+            {{ "%.0f" % (states('input_number.heishamon_heatshift_z1') | int) }}
+      - delay:
+            hours: 0
+            minutes: 0
+            seconds: 5
+            milliseconds: 0
+        enabled: true
+      - service: automation.turn_on
+        entity_id: automation.set_Z1_selector       
 
 # input_number #
 ################
 input_number:
   heishamon_heatshift_z1:
     name: Set Zone 1 Temperature
-    min: 15
-    max: 35
+    min: 29
+    max: 34
     step: 1
 
 # input_select #
@@ -163,10 +207,8 @@ input_select:
   heishamon_heatmode:
     name: Set Heat Mode
     options:
-      #- Heat+DHW
-      - Cool
       - Heat
-      #- DHW
+      - Cool
 
 # sensor #
 ##########
@@ -196,8 +238,6 @@ mqtt:
           Heat
         {%- elif value == "1" -%}
           Cool
-        {%- elif value == "2" -%}
-          Auto
         {%- endif -%}
 
     #TOP5 - Water inlet temp
@@ -231,23 +271,24 @@ mqtt:
     - name: Aquarea Compressor Operating Hours
       state_topic: "panasonic_heat_pump/main/Operations_Hours"
       unit_of_measurement: "Hours"
+#      state_class: total
       state_class: "measurement"
 
     #TOP12 - Compressor On/Off cycle number
     - name: Aquarea Compressor Start/Stop Counter
       state_topic: "panasonic_heat_pump/main/Operations_Counter"
+#      state_class: total
       state_class: "measurement"
 
-    #TOP13 - Main scheduler    
-
-    #TOP14 - Outdoor unit ambient temperature
-    - name: Aquarea Outdoor Ambient
+    #TOP14 - Outside ambient temperature
+    - name: Aquarea Outside Ambient Temperature
       state_topic: "panasonic_heat_pump/main/Outside_Temp"
       unit_of_measurement: "°C"
       state_class: "measurement"
-    
-    #TOP15 - Heating power produced
-    - name: Aquarea Power Produced
+#      state_class: "measurement"
+
+    #TOP15 - Heat power produced
+    - name: Aquarea Heat Power Produced
       state_topic: "panasonic_heat_pump/main/Heat_Power_Production"
       unit_of_measurement: "W"
       device_class: "power"
@@ -255,8 +296,8 @@ mqtt:
       force_update: true
       unique_id: Aquarea_Heat_Production
 
-    #TOP16 - Heating power consumed
-    - name: Aquarea Power Consumed
+    #TOP16 - Heat power consumed
+    - name: Aquarea Heat Power Consumed
       state_topic: "panasonic_heat_pump/main/Heat_Power_Consumption"
       unit_of_measurement: "W"
       device_class: "power"
@@ -264,14 +305,14 @@ mqtt:
       force_update: true
       unique_id: Aquarea_Heat_Consumption
 
-    #TOP17 - Heating powerful mode
+    #TOP17 - Powerful mode
     - name: Aquarea Powerful Mode
       state_topic: "panasonic_heat_pump/main/Powerful_Mode_Time"
       unit_of_measurement: "Min"
       value_template: >-
         {{ (value | int) * 30 }}
 
-    #TOP18 - Heating quiet mode
+    #TOP18 - Heat quiet mode
     - name: Aquarea Quiet Mode
       state_topic: "panasonic_heat_pump/main/Quiet_Mode_Level"
       value_template: >-
@@ -293,8 +334,8 @@ mqtt:
           On
         {%- endif -%}
 
-    #TOP21 - Outside pipe temp
-    - name: Aquarea Outdoor Pipe Temperature
+    #TOP21 - Outside pipe temperature
+    - name: Aquarea Outside Pipe Temperature
       state_topic: "panasonic_heat_pump/main/Outside_Pipe_Temp"
       unit_of_measurement: "°C"
 
@@ -308,15 +349,39 @@ mqtt:
           Active
         {%- endif -%}
 
-    #TOP27 - Heatshift Temperature
-    - name: Aquarea Heatshift Temperature
+    #TOP27 - Z1 heat request temperature
+    - name: Aquarea Z1 Heat Request Temperature
       state_topic: "panasonic_heat_pump/main/Z1_Heat_Request_Temp"
       unit_of_measurement: "°C"
       state_class: "measurement"
-    
-    #TOP28 - Coolshift Temperature
-    - name: Aquarea Coolshift Temperature
+
+    #TOP28 - Z1 cool request temperature
+    - name: Aquarea Z1 Cool Request Temperature
       state_topic: "panasonic_heat_pump/main/Z1_Cool_Request_Temp"
+      unit_of_measurement: "°C"
+      state_class: "measurement"
+
+    #TOP29 - Z1 Heat curve target high temperature
+    - name: Aquarea Z1 Heat Curve Target High Temperature
+      state_topic: "panasonic_heat_pump/main/Z1_Heat_Curve_Target_High_Temp"
+      unit_of_measurement: "°C"
+      state_class: "measurement"
+
+    #TOP30 - Z1 Heat curve target low temperature
+    - name: Aquarea Z1 Heat Curve Target Low Temperature
+      state_topic: "panasonic_heat_pump/main/Z1_Heat_Curve_Target_Low_Temp"
+      unit_of_measurement: "°C"
+      state_class: "measurement"
+
+    #TOP31 - Z1 Heat curve outside high temperature
+    - name: Aquarea Z1 Heat Curve Outside High Temperature
+      state_topic: "panasonic_heat_pump/main/Z1_Heat_Curve_Outside_High_Temp"
+      unit_of_measurement: "°C"
+      state_class: "measurement"
+
+    #TOP32 - Z1 Heat curve outside low temperature
+    - name: Aquarea Z1 Heat Curve Outside Low Temperature
+      state_topic: "panasonic_heat_pump/main/Z1_Heat_Curve_Outside_Low_Temp"
       unit_of_measurement: "°C"
       state_class: "measurement"
       
@@ -326,9 +391,15 @@ mqtt:
       unit_of_measurement: "°C"
       state_class: "measurement"
       unique_id: Aquarea_Thermostat_Temp
-      
-    #TOP38 - Cooling power produced
-    - name: Aquarea Cooling Power Produced
+
+    #TOP36 - Z1 water temperature
+    - name: Aquarea Z1 Water Temperature
+      state_topic: "panasonic_heat_pump/main/Z1_Water_Temp"
+      unit_of_measurement: "°C"
+      state_class: "measurement"
+
+    #TOP38 - Cool power produced
+    - name: Aquarea Cool Power Produced
       state_topic: "panasonic_heat_pump/main/Cool_Power_Production"
       unit_of_measurement: "W"
       device_class: "power"
@@ -336,17 +407,20 @@ mqtt:
       force_update: true
       unique_id: Aquarea_Cool_Production
 
-    #TOP39 - Cooling power consumed
-    - name: Aquarea Cooling Power Consumed
+    #TOP39 - Cool power consumed
+    - name: Aquarea Cool Power Consumed
       state_topic: "panasonic_heat_pump/main/Cool_Power_Consumption"
       unit_of_measurement: "W"
       device_class: "power"
       state_class: "measurement"
       force_update: true
       unique_id: Aquarea_Cool_Consumtion
-    
-    #TOP42 - Z1_Water_Target_Temp
-      #Use TOP7 Main instead
+
+    #TOP42 - Z1 water target temperature
+    - name: Aquarea Z1 Water Target Temperature
+      state_topic: "panasonic_heat_pump/main/Z1_Water_Target_Temp"
+      unit_of_measurement: "°C"
+      state_class: "measurement"
 
     #TOP44 - Last active error
     - name: Aquarea Last Error
@@ -373,7 +447,7 @@ mqtt:
       state_topic: "panasonic_heat_pump/main/Defrost_Temp"
       unit_of_measurement: "°C"
 
-    #TOP53 - Evaporator Air Outlet temp
+    #TOP53 - Eva Outlet temp
     - name: Aquarea Eva Outlet Temperature
       state_topic: "panasonic_heat_pump/main/Eva_Outlet_Temp"
       unit_of_measurement: "°C"
@@ -439,40 +513,6 @@ mqtt:
       unit_of_measurement: "A"
       state_class: "measurement"
 
-    ##1-Wire - Example, replace with correct sensor ID
-    #- name: 1-wire sensor temperature
-    #  state_topic: "panasonic_heat_pump/1wire/1234567890abcdef"
-    #  unit_of_measurement: '°C'
-    #  value_template: '{{value | round(1) }}'
-
-    # The following S0 topics are only available if S0 is enabled.
-    #
-    #S0 kWh Meter 1 - Assumed to measure the heat pump consumption
-    - name: Aquarea Metered Power Consumption
-      state_topic: "panasonic_heat_pump/s0/Watt/1"
-      unit_of_measurement: "W"
-      state_class: "measurement"
-
-    - name: Aquarea Metered Power Consumption Total
-      state_topic: "panasonic_heat_pump/s0/WatthourTotal/1"
-      unit_of_measurement: "kWh"
-      value_template: >-
-        {{ (value | int) / 1000}}
-      state_class: "measurement"
-
-    #S0 kWh Meter 2 - Assumed to measure the backup heater consumption
-    - name: Aquarea Metered Backup Heater Power Consumption
-      state_topic: "panasonic_heat_pump/s0/Watt/2"
-      unit_of_measurement: "W"
-      state_class: "measurement"
-
-    - name: Aquarea Metered Backup Heater Power Consumption Total
-      state_topic: "panasonic_heat_pump/s0/WatthourTotal/2"
-      unit_of_measurement: "kWh"
-      value_template: >-
-        {{ (value | int) / 1000}}
-      state_class: "measurement"
-
   # switch #
   ##########
   switch:
@@ -495,29 +535,128 @@ mqtt:
       retain: false
 
 sensor:
-  #COP Calculations
+  #### SENSORS BELOW ARE NOT IN FIRMWARE ####
+  #Energy use/production
   - platform: template
     sensors:
-      heishamon_cop:
-        friendly_name: "Aquarea COP"
-        unit_of_measurement: "x"
+      heishamon_power_produced:
+        friendly_name: "Aquarea Power Produced"
+        unit_of_measurement: "W"
         value_template: >-
-          {%- if states('sensor.aquarea_power_consumed') | float(0) > 0 -%}
-            {{ '%0.1f' % ((states('sensor.aquarea_power_produced') | float ) / (states('sensor.aquarea_power_consumed') | float )) }}
-          {%- else -%}
-            0.0
-          {%- endif -%}
-
+          {{
+            states('sensor.aquarea_dhw_power_produced') | float +
+            states('sensor.aquarea_heat_power_produced') | float +
+            states('sensor.aquarea_cool_power_produced') | float
+          }}
         availability_template: >-
-          {%- if is_number(states('sensor.aquarea_power_consumed')) and is_number(states('sensor.aquarea_power_produced')) %}
+          {%- if is_number(states('sensor.aquarea_dhw_power_consumed')) and is_number(states('sensor.aquarea_heat_power_consumed')) and is_number(states('sensor.aquarea_heat_power_consumed')) %}
             true
           {%- else %}
             false
           {%- endif %}
 
+      heishamon_power_consumed:
+        friendly_name: "Aquarea Power Consumed"
+        unit_of_measurement: "W"
+        value_template: >-
+          {{
+            states('sensor.aquarea_dhw_power_consumed') | float +
+            states('sensor.aquarea_heat_power_consumed') | float +
+            states('sensor.aquarea_cool_power_consumed') | float
+          }}
+        availability_template: >-
+          {%- if is_number(states('sensor.aquarea_dhw_power_consumed')) and is_number(states('sensor.aquarea_heat_power_consumed')) and is_number(states('sensor.aquarea_heat_power_consumed')) %}
+            true
+          {%- else %}
+            false
+          {%- endif %}
+
+      #COP Calculations
+      heishamon_cop:
+        friendly_name: "Aquarea COP"
+        unit_of_measurement: "x"
+        unique_id: Aquarea_COP
+        value_template: >-
+          {%- if states('sensor.heishamon_power_consumed') | float(0) > 0 -%}
+            {{ '%0.1f' % ((states('sensor.heishamon_power_produced') | float ) / (states('sensor.heishamon_power_consumed') | float )) }}
+          {%- else -%}
+            0.0
+          {%- endif -%}
+        availability_template: >-
+          {%- if is_number(states('sensor.heishamon_power_consumed')) and is_number(states('sensor.heishamon_power_produced')) %}
+            true
+          {%- else %}
+            false
+          {%- endif %}
+
+      heishamon_heat_cop:
+        friendly_name: "Aquarea Heat COP"
+        unit_of_measurement: "x"
+        value_template: >-
+          {%- if states('sensor.aquarea_heat_power_consumed') | float(0) > 0 -%}
+            {{ '%0.1f' % ((states('sensor.aquarea_heat_power_produced') | float ) / (states('sensor.aquarea_heat_power_consumed') | float )) }}
+          {%- else -%}
+            0.0
+          {%- endif -%}
+        availability_template: >-
+          {%- if is_number(states('sensor.aquarea_heat_power_consumed')) and is_number(states('sensor.aquarea_heat_power_produced')) %}
+            true
+          {%- else %}
+            false
+          {%- endif %}
+
+      heishamon_cool_cop:
+        friendly_name: "Aquarea Cool COP"
+        unit_of_measurement: "x"
+        value_template: >-
+          {%- if states('sensor.aquarea_cool_power_consumed') | float(0) > 0 -%}
+            {{ '%0.1f' % ((states('sensor.aquarea_cool_power_produced') | float ) / (states('sensor.aquarea_cool_power_consumed') | float )) }}
+          {%- else -%}
+            0.0
+          {%- endif -%}
+        availability_template: >-
+          {%- if is_number(states('sensor.aquarea_cool_power_consumed')) and is_number(states('sensor.aquarea_cool_power_produced')) %}
+            true
+          {%- else %}
+            false
+          {%- endif %}
+
+  #Calculation Energy produced (kWh) - Heat
+  - platform: integration
+    source: sensor.aquarea_heat_power_produced
+    name: Aquarea Heat Energy Produced
+    unit_prefix: k
+    method: left
+    unique_id: Aquarea_heat_power_produced
+  #Calculation Energy produced (kWh) - Cool
+  - platform: integration
+    source: sensor.aquarea_cool_power_produced
+    name: Aquarea Cool Energy Produced
+    unit_prefix: k
+    method: left
+    unique_id: Aquarea_cool_power_produced
+  #Calculation Energy produced (kWh) - Total
+  - platform: integration
+    source: sensor.heishamon_power_produced
+    name: Aquarea Energy Produced
+    unit_prefix: k
+    method: left
+
   #Calculation Energy consumed (kWh) - Heat
   - platform: integration
-    source: sensor.aquarea_power_consumed
-    name: Aquarea Heat Power Consumed
+    source: sensor.aquarea_heat_power_consumed
+    name: Aquarea Heat Energy Consumed
+    unit_prefix: k
+    method: left
+  #Calculation Energy consumed (kWh) - Cool
+  - platform: integration
+    source: sensor.aquarea_cool_power_consumed
+    name: Aquarea Cool Energy Consumed
+    unit_prefix: k
+    method: left
+  #Calculation Energy consumed (kWh) - Total
+  - platform: integration
+    source: sensor.heishamon_power_consumed
+    name: Aquarea Energy Consumed
     unit_prefix: k
     method: left
